@@ -1,13 +1,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import sqlite3
-import bcrypt
+import bcrypt #to hash the password 
 from models import UserAuth
+from jose import jwt #to generate a token 
 
 
 
 #open the server
 app = FastAPI()  
+
+secret_key = "mysecretkey123"#to generate the token 
 
 
 ###register method 
@@ -54,10 +57,14 @@ def login(auth: UserAuth):
 
         #if the password is correct send success message 
         if check_password == True:
-            return {"message": "Login successful!"}
+            token = jwt.encode({"user_id": user[0]},secret_key,algorithm="HS256")#generate new token
+            return {"token": token} 
+        
         #if wrong 
         elif check_password == False:
             return {"message": "Wrong password"}
+        
+
     #if the email does not exist     
     elif user == None:
         return {"message": "Email does not exist"}
