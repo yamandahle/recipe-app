@@ -236,6 +236,44 @@ def save_favorite_recipe(id: int , token: str = Header()):
         conn.close()
         return {"message": "Recipe saved!"}
     
+
+@app.get("/me/saved")
+def get_saved_recipes(token: str = Header()):
+
+    user_id = get_current_user(token)
+
+    # connect to database
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+
+    # get all saved recipes for the current user
+    cursor.execute("""
+        SELECT recipes.*
+        FROM recipes
+        JOIN saved_recipes ON recipes.id = saved_recipes.recipe_id
+        WHERE saved_recipes.user_id = ?
+    """, (user_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    # build list of dictionaries
+    recipes = []
+    for row in rows:
+        recipes.append({
+            "id": row[0],
+            "title": row[1],
+            "description": row[2],
+            "ingredients": row[3],
+            "steps": row[4],
+            "image_url": row[5],
+            "video_url": row[6],
+            "category": row[7],
+            "user_id": row[8]
+        })
+
+    return {"saved_recipes": recipes}
+    
     
 @app.post("/recipes/{id}/rate")
 def rate(id: int , score: RatingCreate , token: str = Header()):
