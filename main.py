@@ -6,6 +6,7 @@ from models import UserAuth
 from models import RecipeCreate
 from fastapi import Header
 from jose import jwt #to generate a token 
+from models import RatingCreate
 
 
 
@@ -102,8 +103,6 @@ def create_recipe(new_recipe: RecipeCreate ,token: str=Header()):
 
 
 
-
-
 #return a list of recipes 
 @app.get("/recipes")
 def get_recipes():
@@ -190,6 +189,119 @@ def delete_recipe(id: int ,token: str = Header()):
 
     conn.commit()
     conn.close()    
+
+
+@app.post("/recipes/{id}/save")
+def save_favorite_recipe(id: int , token: str = Header()):
+
+    user_id = get_current_user(token)
+
+    #connect to the databse 
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+    
+    #find the recipe 
+    cursor.execute("SELECT * FROM recipes WHERE id = ?", (id,))
+    recipe = cursor.fetchone()
+    
+    #check if the recipe already saved 
+    cursor.execute(
+    "SELECT * FROM saved_recipes WHERE user_id = ? AND recipe_id = ?",
+    (user_id, id)
+    )
+    saved = cursor.fetchone()
+
+
+    #if the recipe does not exist 
+    if recipe is None:
+        conn.close()
+        return {"message": "recipe does not exist "}
+    
+    #if the recipe is already saved 
+    elif saved is not None :
+        cursor.execute(
+            "DELETE FROM saved_recipes WHERE user_id = ? AND recipe_id = ?",
+            (user_id, id)
+        )
+        conn.commit()
+        conn.close()
+        return {"message": "Recipe unsaved!"}
+    
+    #if everything is ok 
+    else:
+        cursor.execute(
+            "INSERT INTO saved_recipes (user_id, recipe_id) VALUES (?, ?)",
+            (user_id, id)
+        )
+        conn.commit()
+        conn.close()
+        return {"message": "Recipe saved!"}
+    
+    
+@app.post("/recipes/{id}/rate")
+def rate(id: int , score: RatingCreate , token: str = Header()):
+
+    user_id = get_current_user(token)
+
+    #connect to the databse 
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+    
+    #find the recipe 
+    cursor.execute("SELECT * FROM recipes WHERE id = ?", (id,))
+    recipe = cursor.fetchone()
+
+    #check if already rated
+    cursor.execute("SELECT * FROM ratings WHERE user_id = ? AND recipe_id = ?", (user_id, id))
+    previous_rating = cursor.fetchone()
+
+    #if the recipe does not exist 
+    if recipe is None:
+        conn.close()
+        return {"message": "recipe does not exist "}
+    
+    #if there us a previous rating , update it 
+    elif previous_rating is not None:
+        cursor.execute("UPDATE ratings SET score = ? WHERE user_id = ? AND recipe_id = ?", (score.score, user_id, id))
+        # get average:
+        cursor.execute("SELECT AVG(score) FROM ratings WHERE recipe_id = ?", (id,))
+        result = cursor.fetchone()
+        average = result[0]  
+        conn.commit()
+        conn.close()
+        return {
+            "message": "Rating updated!",
+            "average_rating": round(average, 1)  
+        }        
+
+
+    #add new rating 
+    else:
+        cursor.execute("INSERT INTO ratings (user_id, recipe_id, score) VALUES (?, ?, ?)", (user_id, id, score.score))   
+        # get average:
+        cursor.execute("SELECT AVG(score) FROM ratings WHERE recipe_id = ?", (id,))
+        result = cursor.fetchone()
+        average = result[0]  
+        conn.commit()
+        conn.close()
+        return {
+            "message": "Rating submitted!",
+            "average_rating": round(average, 1)  
+        }    
+    
+ 
+
+
+        
+        
+    
+
+
+
+
+
+
+
 
 
 
