@@ -14,5 +14,8 @@ class RecipeCreate(BaseModel):
     video_url: str
     category: str      
 
+class RatingCreate(BaseModel):
+    score: int  # 1 to 5    
+
 
 
