@@ -134,6 +134,70 @@ def get_recipes():
     return {"recipes": recipes}
 
 
+#return one specific recipe 
+@app.get("/recipes/{id}")
+def get_one_recipe(id: int):
+
+    #connect to the databse 
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+    
+    #find the specific recipe
+    cursor.execute("SELECT * FROM recipes WHERE id = ?", (id,))
+    recipe = cursor.fetchone()
+    
+    conn.close()
+
+    if recipe is None :
+        return{"message": "recipe is not found"}
+    else:
+        return {
+            "id": recipe[0],
+            "title": recipe[1],
+            "description": recipe[2],
+            "ingredients": recipe[3],
+            "steps": recipe[4],
+            "image_url": recipe[5],
+            "video_url": recipe[6],
+            "category": recipe[7],
+            "user_id": recipe[8]
+        }
+    
+
+#endpoint for deleting a recipe 
+@app.delete("/recipes/{id}")
+def delete_recipe(id: int ,token: str = Header()):
+
+    user_id = get_current_user(token)
+
+    #connect to the databse 
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM recipes WHERE id = ?", (id,))
+    recipe = cursor.fetchone()
+    
+    #if recipe dose not exist 
+    if recipe is None:
+        return {"message": "Recipe not found"}
+
+    #check if the recipe belong to the user 
+    if recipe[8] != user_id:
+        return{"message": "you can only delete your own recipes"}
+    else :
+        cursor.execute("DELETE FROM recipes WHERE id = ?", (id,))
+        return{"message": "recipe deleted successfully!"}
+
+    conn.commit()
+    conn.close()    
+
+
+
+
+
+    
+
+
          
 
 
