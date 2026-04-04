@@ -1,9 +1,15 @@
 from pydantic import BaseModel
 
+class RegisterUser(BaseModel):
+    email: str
+    password: str 
+    full_name: str
 
-class UserAuth(BaseModel):
+class LoginUser(BaseModel):
     email: str
     password: str
+
+
 
 class RecipeCreate(BaseModel):
     title: str 
