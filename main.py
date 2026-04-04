@@ -184,10 +184,11 @@ def delete_recipe(id: int ,token: str = Header()):
         return{"message": "you can only delete your own recipes"}
     else :
         cursor.execute("DELETE FROM recipes WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()   
         return{"message": "recipe deleted successfully!"}
 
-    conn.commit()
-    conn.close()    
+      
 
 
 @app.post("/recipes/{id}/save")
@@ -391,6 +392,35 @@ def get_comments(id: int):
         })
 
     return {"comments": comments}
+
+
+
+#delete a comment 
+#endpoint for deleting a recipe 
+@app.delete("/comments/{comment_id}")
+def delete_comment(id: int ,token: str = Header()):
+
+    user_id = get_current_user(token)
+
+    #connect to the databse 
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM comments WHERE id = ?", (id,))
+    comment = cursor.fetchone()
+    
+    #if recipe dose not exist 
+    if comment is None:
+        return {"message": "Comment not found"}
+
+    #check if the recipe belong to the user 
+    if comment[1] != user_id:
+        return{"message": "you can only delete your own comments"}
+    else :
+        cursor.execute("DELETE FROM comments WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()   
+        return{"message": "Comment deleted successfully!"}
     
     
 
