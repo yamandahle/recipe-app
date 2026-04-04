@@ -4,9 +4,11 @@ import sqlite3
 import bcrypt #to hash the password 
 from models import UserAuth
 from models import RecipeCreate
+from models import CommentCreate
 from fastapi import Header
 from jose import jwt #to generate a token 
 from models import RatingCreate
+from datetime import datetime
 
 
 
@@ -291,11 +293,44 @@ def rate(id: int , score: RatingCreate , token: str = Header()):
     
  
 
+@app.post("/recipes/{id}/comments")
+def add_comment(id: int , new_comment: CommentCreate ,token: str=Header()):
 
-        
-        
+    user_id = get_current_user(token)
+    
+    #connect to the databse 
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+
+
+    #find the recipe 
+    cursor.execute("SELECT * FROM recipes WHERE id = ?", (id,))
+    recipe = cursor.fetchone()
+
+    #if the recipe does not exist 
+    if recipe is None:
+        conn.close()
+        return {"message": "recipe does not exist "}
+    
+    else:
+       created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+       cursor.execute(
+            "INSERT INTO comments (user_id , recipe_id ,  text , created_at ) VALUES (? , ? , ? , ? )",
+            (user_id, id , new_comment.comment , created_at )
+        )
+       
+       conn.commit()
+       conn.close()
+       return{"message" : "comment added successfully"}
     
 
+    
+    
+
+
+
+       
+    
 
 
 
