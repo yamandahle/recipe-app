@@ -2,12 +2,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import sqlite3
 import bcrypt #to hash the password 
-from models import UserAuth
-from models import RecipeCreate
-from models import CommentCreate
+from models import RecipeCreate,CommentCreate,RatingCreate,LoginUser,RegisterUser
 from fastapi import Header
 from jose import jwt #to generate a token 
-from models import RatingCreate
 from datetime import datetime
 
 
@@ -20,7 +17,7 @@ secret_key = "mysecretkey123"#to generate the token
 
 ###register endpoint 
 @app.post("/register")
-def register(user: UserAuth):
+def register(user: RegisterUser):
 
     # hash the password
     hashed_password = bcrypt.hashpw(user.password.encode("utf-8"),bcrypt.gensalt())
@@ -32,8 +29,8 @@ def register(user: UserAuth):
 
     #add a new user to the users table
     cursor.execute(
-        "INSERT INTO users (email, password) VALUES (?, ?)",
-        (user.email, hashed_password.decode("utf-8"))
+        "INSERT INTO users (email, password,full_name) VALUES (?, ? , ?)",
+        (user.email, hashed_password.decode("utf-8"),user.full_name)
     )
 
     conn.commit()
@@ -45,7 +42,7 @@ def register(user: UserAuth):
 
 ###login endpoint
 @app.post("/login")
-def login(auth: UserAuth):
+def login(auth: LoginUser):
 
     conn = sqlite3.connect("recipe_app.db")
     cursor = conn.cursor()
@@ -324,6 +321,38 @@ def add_comment(id: int , new_comment: CommentCreate ,token: str=Header()):
        return{"message" : "comment added successfully"}
     
 
+
+  
+@app.get("/recipes/{id}/comments")
+def get_comments(id: int):
+
+    # connect to database
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+
+    # get all comments for this recipe joined with users to get author email
+    cursor.execute("""
+        SELECT comments.id, comments.text, comments.created_at, users.email,users.full_name
+        FROM comments
+        JOIN users ON comments.user_id = users.id
+        WHERE comments.recipe_id = ?
+    """, (id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    # build list of dictionaries
+    comments = []
+    for row in rows:
+        comments.append({
+            "name": row[4],
+            "id": row[0],
+            "text": row[1],
+            "created_at": row[2],
+            "author": row[3]
+        })
+
+    return {"comments": comments}
     
     
 
