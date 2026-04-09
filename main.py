@@ -6,11 +6,18 @@ from models import RecipeCreate,CommentCreate,RatingCreate,LoginUser,RegisterUse
 from fastapi import Header
 from jose import jwt #to generate a token 
 from datetime import datetime
-
-
+from fastapi.middleware.cors import CORSMiddleware
 
 #open the server
-app = FastAPI()  
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 secret_key = "mysecretkey123"#to generate the token 
 
