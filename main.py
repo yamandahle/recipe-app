@@ -7,6 +7,11 @@ from fastapi import Header
 from jose import jwt #to generate a token 
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
+#to upload a file
+from fastapi import File, UploadFile
+from fastapi.staticfiles import StaticFiles
+import shutil
+import os
 
 #open the server
 app = FastAPI()
@@ -18,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# serve the uploads folder so images are accessible
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 secret_key = "mysecretkey123"#to generate the token 
 
@@ -428,6 +436,27 @@ def delete_comment(id: int ,token: str = Header()):
         conn.commit()
         conn.close()   
         return{"message": "Comment deleted successfully!"}
+    
+    #endpoint to attach an image 
+    @app.post("/upload")
+    async def upload_image(file: UploadFile = File(...), token: str = Header()):
+        # make sure user is logged in
+        get_current_user(token)
+        
+        # create uploads folder if it doesn't exist
+        os.makedirs("uploads", exist_ok=True)
+        
+        # save the file
+        file_path = f"uploads/{file.filename}"
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # return the image URL
+        return {"image_url": f"http://127.0.0.1:8000/uploads/{file.filename}"}
+    
+
+
+
     
     
 
