@@ -24,7 +24,7 @@ class RatingCreate(BaseModel):
     score: int  # 1 to 5   
 
 class CommentCreate(BaseModel):
-    comment: str     
+    text: str     
 
 
 

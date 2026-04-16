@@ -289,6 +289,19 @@ def get_saved_recipes(token: str = Header()):
         })
 
     return {"saved_recipes": recipes}
+
+#GET /recipes/{id}/rating endpoint
+@app.get("/recipes/{id}/rating")
+def get_rating(id: int):
+    conn = sqlite3.connect("recipe_app.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT AVG(score) FROM ratings WHERE recipe_id = ?", (id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    average = result[0] if result[0] is not None else 0
+    return {"average_rating": round(average, 1)}
     
     
 @app.post("/recipes/{id}/rate")
@@ -324,7 +337,7 @@ def rate(id: int , score: RatingCreate , token: str = Header()):
         conn.close()
         return {
             "message": "Rating updated!",
-            "average_rating": round(average, 1)  
+            "average_rating": round(average, 1) 
         }        
 
 
@@ -367,7 +380,7 @@ def add_comment(id: int , new_comment: CommentCreate ,token: str=Header()):
        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
        cursor.execute(
             "INSERT INTO comments (user_id , recipe_id ,  text , created_at ) VALUES (? , ? , ? , ? )",
-            (user_id, id , new_comment.comment , created_at )
+            (user_id, id , new_comment.text, created_at )
         )
        
        conn.commit()
@@ -386,24 +399,23 @@ def get_comments(id: int):
 
     # get all comments for this recipe joined with users to get author email
     cursor.execute("""
-        SELECT comments.id, comments.text, comments.created_at, users.email,users.full_name
-        FROM comments
-        JOIN users ON comments.user_id = users.id
-        WHERE comments.recipe_id = ?
+    SELECT comments.id, comments.text, comments.created_at, users.full_name, comments.user_id
+    FROM comments
+    JOIN users ON comments.user_id = users.id
+    WHERE comments.recipe_id = ?
     """, (id,))
 
     rows = cursor.fetchall()
     conn.close()
 
-    # build list of dictionaries
     comments = []
     for row in rows:
         comments.append({
-            "name": row[4],
             "id": row[0],
             "text": row[1],
             "created_at": row[2],
-            "author": row[3]
+            "author": row[3],
+            "user_id": row[4]  # ← add this
         })
 
     return {"comments": comments}
@@ -411,9 +423,9 @@ def get_comments(id: int):
 
 
 #delete a comment 
-#endpoint for deleting a recipe 
+#endpoint for deleting a 
 @app.delete("/comments/{comment_id}")
-def delete_comment(id: int ,token: str = Header()):
+def delete_comment(comment_id: int ,token: str = Header()):
 
     user_id = get_current_user(token)
 
@@ -421,7 +433,7 @@ def delete_comment(id: int ,token: str = Header()):
     conn = sqlite3.connect("recipe_app.db")
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM comments WHERE id = ?", (id,))
+    cursor.execute("SELECT * FROM comments WHERE id = ?", (comment_id,))
     comment = cursor.fetchone()
     
     #if recipe dose not exist 
@@ -432,14 +444,16 @@ def delete_comment(id: int ,token: str = Header()):
     if comment[1] != user_id:
         return{"message": "you can only delete your own comments"}
     else :
-        cursor.execute("DELETE FROM comments WHERE id = ?", (id,))
+        cursor.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
         conn.commit()
         conn.close()   
         return{"message": "Comment deleted successfully!"}
     
-    #endpoint to attach an image 
-    @app.post("/upload")
-    async def upload_image(file: UploadFile = File(...), token: str = Header()):
+
+    
+#endpoint to attach an image 
+@app.post("/upload")
+async def upload_image(file: UploadFile = File(...), token: str = Header()):
         # make sure user is logged in
         get_current_user(token)
         
